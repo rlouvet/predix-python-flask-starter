@@ -1,0 +1,7 @@
+---
+applications:
+- name: cf-flaskapp
+  instances: 1
+  memory: 128M
+  command: python flaskapp.py
+  timeout: 20
