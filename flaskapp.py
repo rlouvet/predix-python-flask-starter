@@ -36,7 +36,7 @@ if services is not None:
 if vcap is not None:
     print vcap
     try:
-        print 'vcap postgres credentials: ' vcap['postgres'][0]['credentials']
+        print 'vcap postgres credentials: ' + vcap['postgres'][0]['credentials']
         postgres = vcap['postgres'][0]['credentials']
         if postgres is not None:
             jdbc_uri = postgres['jdbc_uri']
@@ -66,7 +66,7 @@ except:
 dialect = 'postgresql'
 driver = 'psycopg2'
 
-createEngineURL = dialect + '+' + driver + '://' + username + ':' + password_str + '@' + db_host + ':' + db_port + '/' + database_name
+#createEngineURL = dialect + '+' + driver + '://' + username + ':' + password_str + '@' + db_host + ':' + db_port + '/' + database_name
 
 
 #dates = pd.date_range('20130101', periods=6)
@@ -74,10 +74,10 @@ createEngineURL = dialect + '+' + driver + '://' + username + ':' + password_str
 
 #df.to_sql('data', engine)
 if connected:
-    try:
-        engine = sqla.create_engine(createEngineURL)
-    except:
-        print "Could not create sqla engine!"
+    #try:
+        #engine = sqla.create_engine(createEngineURL)
+    #except:
+        #print "Could not create sqla engine!"
 
     cur.execute("CREATE TABLE test (id serial PRIMARY KEY, num integer, data varchar);")
     cur.execute("INSERT INTO test (num, data) VALUES (%s, %s)",(100, "abc'def"))
@@ -88,7 +88,7 @@ if connected:
 
 
 ### Main api - GET - provides connection info
-@app.route('/')
+@app.route('/', methods=['GET'])
 def main():
     response = '<h1>Database Connection Info</h1><hr>'
 
