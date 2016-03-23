@@ -34,14 +34,19 @@ if services is not None:
     vcap = json.loads(services)
 
 if vcap is not None:
-    postgres = vcap['postgres'][0]['credentials']
-    if postgres is not None:
-        jdbc_uri = postgres['jdbc_uri']
-        database_name = postgres['database']
-        username = postgres['username']
-        password_str = postgres['password']
-        db_host = postgres['host']
-        db_port = postgres['port']
+    print vcap
+    try:
+        print 'vcap postgres credentials: ' vcap['postgres'][0]['credentials']
+        postgres = vcap['postgres'][0]['credentials']
+        if postgres is not None:
+            jdbc_uri = postgres['jdbc_uri']
+            database_name = postgres['database']
+            username = postgres['username']
+            password_str = postgres['password']
+            db_host = postgres['host']
+            db_port = postgres['port']
+    except:
+        print "Still no Postgres binding!"
 else:
     database_name = '<DATABASE_NAME>'
     username = '<USERNAME>'
@@ -62,13 +67,18 @@ dialect = 'postgresql'
 driver = 'psycopg2'
 
 createEngineURL = dialect + '+' + driver + '://' + username + ':' + password_str + '@' + db_host + ':' + db_port + '/' + database_name
-engine = sqla.create_engine(createEngineURL)
+
 
 #dates = pd.date_range('20130101', periods=6)
 #df = pd.DataFrame(np.random.randn(6,4), index=dates, columns=list('ABCD'))
 
 #df.to_sql('data', engine)
 if connected:
+    try:
+        engine = sqla.create_engine(createEngineURL)
+    except:
+        print "Could not create sqla engine!"
+
     cur.execute("CREATE TABLE test (id serial PRIMARY KEY, num integer, data varchar);")
     cur.execute("INSERT INTO test (num, data) VALUES (%s, %s)",(100, "abc'def"))
     cur.execute("SELECT * FROM test;")
