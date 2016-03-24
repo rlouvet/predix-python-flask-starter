@@ -3,8 +3,8 @@ __author__ = 'robin.louvet@ge.com' #Some chunks coming from 'dattnguyen82'
 import os
 import flask as flsk
 import sqlalchemy as sqla
-#import pandas as pd
-#import numpy as np
+import pandas as pd
+import numpy as np
 import json
 import psycopg2
 
@@ -36,9 +36,6 @@ if services is not None:
     vcap = json.loads(services)
 
 if vcap is not None:
-    print json.dumps(vcap, sort_keys=True, indent=4, separators=(',', ': '))
-    print 'vcap postgres credentials: '
-    print vcap['postgres'][0]['credentials']
     postgres = vcap['postgres'][0]['credentials']
     if postgres is not None:
         jdbc_uri = postgres['jdbc_uri']
@@ -56,39 +53,22 @@ else:
     db_port = 5432
 
 
-
-try:
-	print [database_name, username, password_str, db_host, db_port]
-	conn = psycopg2.connect(database=database_name, user=username, password=password_str, host=db_host, port=db_port)
-	connected = True
-	cur = conn.cursor()
-except psycopg2.Error as e:
-	errStr = e.pgerror
-	print e.pgerror 
-	connected = False
-
 dialect = 'postgresql'
 driver = 'psycopg2'
+createEngineURL = dialect + '+' + driver + '://' + username + ':' + password_str + '@' + db_host + ':' + db_port + '/' + database_name
 
-#createEngineURL = dialect + '+' + driver + '://' + username + ':' + password_str + '@' + db_host + ':' + db_port + '/' + database_name
+try:
+    engine = sqla.create_engine(createEngineURL)
+    connected = True
+except:
+    print "Could not create sqla engine!"
+    connected = False
 
-
-#dates = pd.date_range('20130101', periods=6)
-#df = pd.DataFrame(np.random.randn(6,4), index=dates, columns=list('ABCD'))
-
-#df.to_sql('data', engine)
 if connected:
-    #try:
-        #engine = sqla.create_engine(createEngineURL)
-    #except:
-        #print "Could not create sqla engine!"
+    dates = pd.date_range('20130101', periods=6)
+    df = pd.DataFrame(np.random.randn(6,4), index=dates, columns=list('ABCD'))
 
-    cur.execute("CREATE TABLE test (id serial PRIMARY KEY, num integer, data varchar);")
-    cur.execute("INSERT INTO test (num, data) VALUES (%s, %s)",(100, "abc'def"))
-    cur.execute("SELECT * FROM test;")
-    conn.commit()
-    cur.close()
-    conn.close()
+    df.to_sql('data', engine)
 
 
 ### Main api - GET - provides connection info
