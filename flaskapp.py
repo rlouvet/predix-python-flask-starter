@@ -1,6 +1,7 @@
 __author__ = 'robin.louvet@ge.com' #Some chunks coming from 'dattnguyen82'
 
 import os
+import logging
 import flask as flsk
 import sqlalchemy as sqla
 import pandas as pd
@@ -10,8 +11,14 @@ import psycopg2
 
 app = flsk.Flask(__name__)
 
+#formatter = logging.Formatter('%(asctime)s :: %(levelname)s :: %(message)s')
+#streamHandler = logging.StreamHandler(stream=sys.)
+app.logger.info("Starting Flask Application")
+
+
 errStr = ""
 
+app.logger.info("Setting configuration")
 #Configuration
 port = None
 vcap = None
@@ -57,12 +64,15 @@ dialect = 'postgresql'
 driver = 'psycopg2'
 createEngineURL = dialect + '+' + driver + '://' + username + ':' + password_str + '@' + db_host + ':' + db_port + '/' + database_name
 
+app.logger.info("Trying to connect to POSTGRES db...")
 try:
     engine = sqla.create_engine(createEngineURL)
     connected = True
+    app.logger.info("Connected!")
 except:
     print "Could not create sqla engine!"
     connected = False
+    app.logger.info("Could not connect")
 
 if connected:
     dates = pd.date_range('20130101', periods=6)
@@ -74,6 +84,8 @@ if connected:
 ### Main api - GET - provides connection info
 @app.route('/', methods=['GET'])
 def main():
+    addEntry(flsk.request.)
+
     response = '<h1>Database Connection Info</h1><hr>'
 
     if jdbc_uri is not None:
