@@ -10,6 +10,8 @@ import psycopg2
 
 app = flsk.Flask(__name__)
 
+errStr = ""
+
 #Configuration
 port = None
 vcap = None
@@ -34,19 +36,18 @@ if services is not None:
     vcap = json.loads(services)
 
 if vcap is not None:
-    print vcap
-    try:
-        print 'vcap postgres credentials: ' + vcap['postgres'][0]['credentials']
-        postgres = vcap['postgres'][0]['credentials']
-        if postgres is not None:
-            jdbc_uri = postgres['jdbc_uri']
-            database_name = postgres['database']
-            username = postgres['username']
-            password_str = postgres['password']
-            db_host = postgres['host']
-            db_port = postgres['port']
-    except:
-        print "Still no Postgres binding!"
+    print json.dumps(vcap, sort_keys=True, indent=4, separators=(',', ': '))
+    print 'vcap postgres credentials: '
+    print vcap['postgres'][0]['credentials']
+    postgres = vcap['postgres'][0]['credentials']
+    if postgres is not None:
+        jdbc_uri = postgres['jdbc_uri']
+        database_name = postgres['database']
+        username = postgres['username']
+        password_str = postgres['password']
+        db_host = postgres['host']
+        db_port = postgres['port']
+
 else:
     database_name = '<DATABASE_NAME>'
     username = '<USERNAME>'
@@ -57,11 +58,14 @@ else:
 
 
 try:
-    conn = psycopg2.connect(database=database_name, user=username, password=password_str, host=db_host, port=db_port)
-    connected = True
-    cur = conn.cursor()
-except:
-    connected = False
+	print [database_name, username, password_str, db_host, db_port]
+	conn = psycopg2.connect(database=database_name, user=username, password=password_str, host=db_host, port=db_port)
+	connected = True
+	cur = conn.cursor()
+except psycopg2.Error as e:
+	errStr = e.pgerror
+	print e.pgerror 
+	connected = False
 
 dialect = 'postgresql'
 driver = 'psycopg2'
@@ -115,7 +119,7 @@ def main():
     if connected is True:
         response += '<font color="#00FF00"><b>Database connection is active</b></font>'
     else:
-        response += '<font color="#FF0000"><b>Database is not connected</b></font>'
+        response += '<font color="#FF0000"><b>Database is not connected</b></font>' + '<b>error:</b> ' + str(errStr) + "<BR>" 
 
     return response
 
