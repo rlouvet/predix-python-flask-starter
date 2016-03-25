@@ -1,6 +1,7 @@
 __author__ = 'robin.louvet@ge.com' #Some chunks coming from 'dattnguyen82'
 
 import os
+import sys
 import logging
 import flask as flsk
 import sqlalchemy as sqla
@@ -9,102 +10,122 @@ import numpy as np
 import json
 import psycopg2
 
+# Setup logging
 app = flsk.Flask(__name__)
 
 #formatter = logging.Formatter('%(asctime)s :: %(levelname)s :: %(message)s')
-#streamHandler = logging.StreamHandler(stream=sys.)
-app.logger.info("Starting Flask Application")
+#handler = logging.StreamHandler(stream=sys.stdout)
+#handler.setFormatter(formatter)
+#handler.setLevel(logging.DEBUG)
 
+#app.logger.addHandler(handler)
+#app.logger.setLevel(logging.DEBUG)
+
+#app.logger.info("Starting Flask Application")
+
+
+def setupConfig():
+    #Configuration
+    #app.logger.info("Setting configuration")
+    config = {
+        'port' : None,
+        'vcap' : None,
+        'jdbc_uri' : None,
+        'database_name' : None,
+        'username' : None,
+        'password_str' : None,
+        'db_host' : None,
+        'db_port' : None,
+        'connected' : False,
+        'conn' : None,
+        'cur' : None
+    }
+
+    portStr = os.getenv("VCAP_APP_PORT")
+
+    if portStr is not None:
+        config['port'] = int(portStr)
+        #app.logger.info("Flaskapp operating on port: %i", port)
+
+    services = os.getenv("VCAP_SERVICES")
+
+    if services is not None:
+        config['vcap'] = json.loads(services)
+
+    if config['vcap'] is not None:
+        postgres = config['vcap']['postgres'][0]['credentials']
+        if postgres is not None:
+            config['jdbc_uri'] = postgres['jdbc_uri']
+            config['database_name'] = postgres['database']
+            config['username'] = postgres['username']
+            config['password_str'] = postgres['password']
+            config['db_host'] = postgres['host']
+            config['db_port'] = postgres['port']
+            #app.logger.info("Postgres configuration OK")
+
+    else:
+        config['database_name'] = '<DATABASE_NAME>'
+        config['username'] = '<USERNAME>'
+        config['password_str'] = '<PASSWORD>'
+        config['db_host'] = 'localhost'
+        config['db_port'] = 5432
+
+    return config
+
+
+def connectDb(username, password_str, db_host, db_port, database_name):
+    dialect = 'postgresql'
+    driver = 'psycopg2'
+    createEngineURL = dialect + '+' + driver + '://' + username + ':' + password_str + '@' + db_host + ':' + db_port + '/' + database_name
+
+    #app.logger.info("Trying to connect to POSTGRES db...")
+    try:
+        engine = sqla.create_engine(createEngineURL)
+        connected = True
+        #app.logger.info("Connected to postgres db: %s", database_name)
+    except:
+        connected = False
+        #app.logger.info("Could not connect to postgres db")
+
+    return connected, engine
+
+
+def addEntry(engine):
+    now = pd.to_datetime('now')
+    df = pd.DataFrame(np.random.randn(1,4), index=now, columns=list('ABCD'))
+
+    df.to_sql('data', engine, if_exists='append')
 
 errStr = ""
 
-app.logger.info("Setting configuration")
-#Configuration
-port = None
-vcap = None
-jdbc_uri = None
-database_name = None
-username = None
-password_str = None
-db_host = None
-db_port = None
-connected = False
-conn = None
-cur = None
+config = setupConfig()
+[connected, engine] = connectDb(config['username'], config['password_str'], config['db_host'], config['db_port'], config['database_name'])
 
-portStr = os.getenv("VCAP_APP_PORT")
+# Main api - GET - provides connection info
 
-if portStr is not None:
-    port = int(portStr)
-
-services = os.getenv("VCAP_SERVICES")
-
-if services is not None:
-    vcap = json.loads(services)
-
-if vcap is not None:
-    postgres = vcap['postgres'][0]['credentials']
-    if postgres is not None:
-        jdbc_uri = postgres['jdbc_uri']
-        database_name = postgres['database']
-        username = postgres['username']
-        password_str = postgres['password']
-        db_host = postgres['host']
-        db_port = postgres['port']
-
-else:
-    database_name = '<DATABASE_NAME>'
-    username = '<USERNAME>'
-    password_str = '<PASSWORD>'
-    db_host = 'localhost'
-    db_port = 5432
-
-
-dialect = 'postgresql'
-driver = 'psycopg2'
-createEngineURL = dialect + '+' + driver + '://' + username + ':' + password_str + '@' + db_host + ':' + db_port + '/' + database_name
-
-app.logger.info("Trying to connect to POSTGRES db...")
-try:
-    engine = sqla.create_engine(createEngineURL)
-    connected = True
-    app.logger.info("Connected!")
-except:
-    print "Could not create sqla engine!"
-    connected = False
-    app.logger.info("Could not connect")
-
-if connected:
-    dates = pd.date_range('20130101', periods=6)
-    df = pd.DataFrame(np.random.randn(6,4), index=dates, columns=list('ABCD'))
-
-    df.to_sql('data', engine)
-
-
-### Main api - GET - provides connection info
 @app.route('/', methods=['GET'])
 def main():
-    addEntry(flsk.request.)
+    #addEntry(engine)
 
     response = '<h1>Database Connection Info</h1><hr>'
 
-    if jdbc_uri is not None:
-        response += '<b>jdbc_uri:</b> ' + jdbc_uri + "<BR>"
+    if config['jdbc_uri'] is not None:
+        response += '<b>jdbc_uri:</b> ' + config['jdbc_uri'] + "<BR>"
 
-    if database_name is not None:
-        response += '<b>database:</b> ' + database_name + "<BR>"
+    if config['database_name'] is not None:
+        response += '<b>database:</b> ' + config['database_name'] + "<BR>"
 
-    if username is not None:
-        response += '<b>username:</b> ' + username + "<BR>"
+    if config['username'] is not None:
+        response += '<b>username:</b> ' + config['username'] + "<BR>"
 
-    if password_str is not None:
-        response += '<b>password:</b> ' + password_str + "<BR>"
+    if config['password_str'] is not None:
+        response += '<b>password:</b> ' + config['password_str'] + "<BR>"
 
-    if db_host is not None:
-        response += '<b>host:</b> ' + db_host + "<BR>"
+    if config['db_host'] is not None:
+        response += '<b>host:</b> ' + config['db_host'] + "<BR>"
 
-    if db_port is not None:
-        response += '<b>port:</b> ' + str(db_port) + "<BR>"
+    if config['db_port'] is not None:
+        response += '<b>port:</b> ' + str(config['db_port']) + "<BR>"
 
     response += '<hr>'
 
@@ -116,5 +137,7 @@ def main():
     return response
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0',
-	port=port)
+    app.run(
+        host='0.0.0.0',
+        port=config['port']
+    )
